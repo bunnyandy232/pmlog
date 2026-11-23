@@ -4,7 +4,15 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>PMLog</title>
-  <link rel="stylesheet" href="./app.css" />
+  <script>
+    (function () {
+      if (location.protocol === "file:") return;
+      var b = document.createElement("base");
+      b.href = /\/prototypes(\/|$)/.test(location.pathname) ? "/prototypes/" : "/";
+      document.currentScript.parentNode.insertBefore(b, document.currentScript);
+    })();
+  </script>
+  <link rel="stylesheet" href="app.css" />
 </head>
 <body>
   <div class="app-layout">
@@ -249,7 +257,7 @@
     </div>
   </div>
 
-  <script src="./data.js"></script>
-  <script src="./app.js"></script>
+  <script src="data.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>

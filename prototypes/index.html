@@ -4,7 +4,15 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>PMLog — 登录</title>
-  <link rel="stylesheet" href="./app.css" />
+  <script>
+    (function () {
+      if (location.protocol === "file:") return;
+      var b = document.createElement("base");
+      b.href = /\/prototypes(\/|$)/.test(location.pathname) ? "/prototypes/" : "/";
+      document.currentScript.parentNode.insertBefore(b, document.currentScript);
+    })();
+  </script>
+  <link rel="stylesheet" href="app.css" />
 </head>
 <body>
   <div class="login-page">
@@ -21,11 +29,11 @@
         <button type="submit" class="btn btn-primary">进入系统</button>
       </form>
 
-      <p class="path">本地打开：file:///d:/cursor/pmlog/prototypes/index.html</p>
+      <p class="path">演示原型 · 选择身份后进入系统</p>
     </div>
   </div>
 
-  <script src="./data.js"></script>
+  <script src="data.js"></script>
   <script>
     (function () {
       var sel = document.getElementById("user-select");
@@ -65,7 +73,7 @@
         var id = sel.value;
         if (!id) return;
         localStorage.setItem("pmlog_user", id);
-        location.href = "./app.html?user=" + encodeURIComponent(id);
+        location.href = "app.html?user=" + encodeURIComponent(id);
       });
     })();
   </script>

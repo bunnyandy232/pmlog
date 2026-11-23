@@ -1,6 +1,14 @@
 {
   "cleanUrls": true,
-  "trailingSlash": false,
+  "trailingSlash": true,
+  "rewrites": [
+    { "source": "/", "destination": "/prototypes/" },
+    { "source": "/app/", "destination": "/prototypes/app.html" },
+    { "source": "/app.html", "destination": "/prototypes/app.html" },
+    { "source": "/app.css", "destination": "/prototypes/app.css" },
+    { "source": "/app.js", "destination": "/prototypes/app.js" },
+    { "source": "/data.js", "destination": "/prototypes/data.js" }
+  ],
   "headers": [
     {
       "source": "/(.*)",

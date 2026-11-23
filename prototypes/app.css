@@ -1,6 +1,4 @@
 /* Scheme A — command center look for PMLog */
-@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap");
-
 :root {
   --bg: #e8eef2;
   --panel: #ffffff;
@@ -12,7 +10,8 @@
   --amber: #b45309;
   --rose: #b42318;
   --sidebar: #0f2a30;
-  --font: "DM Sans", "Noto Sans SC", sans-serif;
+  /* 避免依赖 Google Fonts，保证国内/公网可加载 */
+  --font: "Segoe UI", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {

@@ -4,7 +4,7 @@
   var userId = params.get("user") || localStorage.getItem("pmlog_user");
   var currentUser = userId ? PMLOG.userById(userId) : null;
   if (!currentUser) {
-    location.href = "./index.html";
+    location.href = "index.html";
     return;
   }
   localStorage.setItem("pmlog_user", currentUser.id);
@@ -1115,7 +1115,7 @@
     if (e.target.id === "report-modal") this.classList.remove("open");
   });
   document.getElementById("btn-logout").addEventListener("click", function () {
-    location.href = "./index.html";
+    location.href = "index.html";
   });
 
   function refreshAll() {
