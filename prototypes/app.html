@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PMLog</title>
+  <link rel="stylesheet" href="./app.css" />
+</head>
+<body>
+  <div class="app-layout">
+    <aside class="sidebar" id="sidebar">
+      <button type="button" class="sidebar-toggle" id="sidebar-toggle" title="展开/隐藏菜单">收起</button>
+      <div class="logo"><span class="logo-text">PM</span><span>Log</span></div>
+      <nav class="nav" aria-label="主导航">
+        <a href="#sec-monitor" class="nav-link leader-only" data-section="monitor" data-short="中心">项目中心</a>
+        <a href="#sec-work" class="nav-link" data-section="work" data-short="工作">我的工作</a>
+      </nav>
+      <div class="role-box" id="side-role">当前角色</div>
+    </aside>
+
+    <div class="workspace">
+      <header class="topbar">
+        <div class="topbar-meta">
+          <div class="item">
+            <span class="label">当前时间</span>
+            <span class="value clock" id="top-datetime">—</span>
+          </div>
+          <div class="item">
+            <span class="label">条线</span>
+            <span class="value" id="top-line">—</span>
+          </div>
+          <div class="item">
+            <span class="label">登录人</span>
+            <span class="value" id="top-name">—</span>
+          </div>
+        </div>
+        <div class="topbar-actions">
+          <button type="button" class="btn-link" id="btn-logout">退出登录</button>
+        </div>
+      </header>
+
+      <main class="main">
+        <h1 id="page-title">我的工作</h1>
+        <p class="subtitle" id="page-subtitle"></p>
+
+        <section id="sec-monitor" class="section leader-only" data-section="monitor">
+          <div class="panel monitor-board">
+            <div class="section-head" style="margin-top:0">
+              <h2 style="margin:0">项目中心看板</h2>
+              <div class="date-range">
+                <label for="monitor-date-start">起止时间</label>
+                <input type="date" id="monitor-date-start" />
+                <span class="date-sep">至</span>
+                <input type="date" id="monitor-date-end" />
+                <button type="button" class="btn btn-ghost" id="monitor-date-reset">重置</button>
+              </div>
+            </div>
+            <p class="muted" style="margin-bottom:10px">按起止时间与下方牵头人勾选同步汇总；未选日期表示不限制时间。</p>
+            <div class="kpis kpis-5">
+              <div class="kpi"><div class="label">紧急且重要（进行中）</div><div class="value" id="kpi-q1">0</div><div class="hint">未完成 · Q1</div></div>
+              <div class="kpi"><div class="label">进行中项目</div><div class="value" id="kpi-projects">0</div><div class="hint">未完成合计</div></div>
+              <div class="kpi"><div class="label">已完成项目</div><div class="value" id="kpi-done">0</div><div class="hint">完成日落在区间内</div></div>
+              <div class="kpi"><div class="label">工作日志</div><div class="value" id="kpi-logs">0</div><div class="hint">录入日落在区间内</div></div>
+              <div class="kpi"><div class="label">逾期项目</div><div class="value" id="kpi-overdue">0</div><div class="hint">计划完成早于截止日</div></div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <h2>项目中心</h2>
+            <p class="muted" style="margin-bottom:10px">仅领导可见。可按员工筛选系统项目与日志动态。</p>
+            <div class="form-row">
+              <label>按员工筛选 <span class="muted" style="font-weight:400">（可多选；按牵头人匹配，不选则显示全部；同步更新上方看板）</span></label>
+              <div class="member-picker monitor-filter" id="monitor-filter-users"></div>
+              <div class="form-actions" style="margin-top:8px">
+                <button type="button" class="btn btn-ghost" id="monitor-filter-clear">清空筛选</button>
+              </div>
+            </div>
+            <h3>全员系统项目 <span class="muted" style="font-weight:400;font-size:12px">点击项目名展开里程碑 · 点击表头排序</span></h3>
+            <table id="monitor-project-table" class="sortable-table">
+              <thead>
+                <tr>
+                  <th data-sort="name" class="sortable">项目</th>
+                  <th data-sort="lead" class="sortable">牵头人</th>
+                  <th data-sort="members" class="sortable">成员</th>
+                  <th data-sort="importance" class="sortable">重要度</th>
+                  <th data-sort="urgency" class="sortable">紧急度</th>
+                  <th data-sort="quadrant" class="sortable">四象限</th>
+                  <th data-sort="start" class="sortable">计划开始</th>
+                  <th data-sort="end" class="sortable">计划完成</th>
+                  <th data-sort="assignedAt" class="sortable">任务分配时间</th>
+                  <th data-sort="status" class="sortable">状态</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="monitor-project-body"></tbody>
+            </table>
+            <div class="section-head">
+              <h3>近期工作日志动态</h3>
+              <div class="period-tabs" id="monitor-log-period" role="tablist" aria-label="日志时段">
+                <button type="button" class="period-tab active" data-period="week">本周</button>
+                <button type="button" class="period-tab" data-period="month">本月</button>
+                <button type="button" class="period-tab" data-period="half">近半年</button>
+                <button type="button" class="period-tab" data-period="year">近一年</button>
+              </div>
+            </div>
+            <table>
+              <thead>
+                <tr><th>时间</th><th>作者</th><th>类型</th><th>内容</th></tr>
+              </thead>
+              <tbody id="monitor-log-body"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Merged: projects + logs -->
+        <section id="sec-work" class="section" data-section="work">
+          <div class="work-top">
+            <div class="panel work-quad-panel">
+              <h2 style="margin-bottom:6px">
+                四象限优先级
+                <button type="button" class="btn btn-primary leader-only" id="btn-new-project">+ 新增系统项目</button>
+              </h2>
+              <p class="muted" id="projects-intro" style="margin-bottom:8px"></p>
+              <div id="quad-wrap"></div>
+            </div>
+            <div class="panel work-cal-panel">
+              <h2 style="margin-bottom:6px">日志月历</h2>
+              <p class="muted" style="margin-bottom:8px">按月查看本人日志记录分布，圆点表示当日有日志。</p>
+              <div id="log-calendar"></div>
+            </div>
+          </div>
+
+          <div id="project-form-wrap" class="project-form-card hidden">
+            <div class="project-form-head">
+              <h3 id="project-form-title">新增系统项目</h3>
+              <p class="muted">填写基本信息并分配员工；多人时请指定牵头人。</p>
+            </div>
+            <form id="project-form">
+              <input type="hidden" id="pf-id" />
+              <div class="pf-grid">
+                <div class="form-row pf-span-3">
+                  <label for="pf-name">系统项目名称</label>
+                  <input id="pf-name" required placeholder="例如：条线日报自动化" />
+                </div>
+                <div class="form-row">
+                  <label for="pf-start">计划开始时间</label>
+                  <input id="pf-start" type="date" required />
+                </div>
+                <div class="form-row">
+                  <label for="pf-end">计划完成时间</label>
+                  <input id="pf-end" type="date" required />
+                </div>
+                <div class="form-row">
+                  <label for="pf-assigned">任务分配时间</label>
+                  <input id="pf-assigned" type="date" />
+                </div>
+                <div class="form-row">
+                  <label for="pf-importance">优先级（重要度）</label>
+                  <select id="pf-importance">
+                    <option value="">未设定</option>
+                    <option value="important">重要</option>
+                    <option value="not_important">不重要</option>
+                  </select>
+                </div>
+                <div class="form-row">
+                  <label for="pf-contact">对接人</label>
+                  <input id="pf-contact" placeholder="外部/业务对接人" />
+                </div>
+                <div class="form-row">
+                  <label for="pf-lead">项目牵头人</label>
+                  <select id="pf-lead"></select>
+                </div>
+                <div class="form-row pf-span-3">
+                  <label>分配员工 <span class="muted" style="font-weight:400">（可多选；勾选后请确认牵头人）</span></label>
+                  <div class="member-picker" id="pf-members"></div>
+                </div>
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="btn btn-primary">发布</button>
+                <button type="button" class="btn btn-ghost" id="pf-cancel">取消</button>
+              </div>
+            </form>
+          </div>
+
+          <div class="work-split">
+            <div class="panel">
+              <h2>
+                系统项目
+                <button type="button" class="btn btn-ghost" id="btn-export-projects">导出项目</button>
+              </h2>
+              <div id="project-list"></div>
+            </div>
+            <div class="panel">
+              <h2>
+                工作日志
+                <span class="report-actions">
+                  <button type="button" class="btn btn-ghost" data-report="week">周报</button>
+                  <button type="button" class="btn btn-ghost" data-report="month">月报</button>
+                  <button type="button" class="btn btn-ghost" data-report="quarter">季报</button>
+                  <button type="button" class="btn btn-ghost" data-report="year">年报</button>
+                </span>
+              </h2>
+              <div class="notice">
+                <h3 style="margin-top:0;font-size:13px">新建工作日志</h3>
+                <form id="log-form">
+                  <div class="form-row">
+                    <label for="lf-type">日志类型</label>
+                    <select id="lf-type">
+                      <option value="daily">日常日志</option>
+                      <option value="special">专项日志</option>
+                    </select>
+                  </div>
+                  <div class="form-row hidden" id="lf-project-row">
+                    <label for="lf-project">绑定系统项目</label>
+                    <select id="lf-project"></select>
+                  </div>
+                  <div class="form-row">
+                    <label for="lf-content">内容</label>
+                    <textarea id="lf-content" required placeholder="记录今日工作…"></textarea>
+                  </div>
+                  <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">发布日志</button>
+                  </div>
+                </form>
+              </div>
+              <h3>我的日志</h3>
+              <table>
+                <thead>
+                  <tr><th>时间</th><th>类型</th><th>关联项目</th><th>内容</th></tr>
+                </thead>
+                <tbody id="log-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="report-modal" role="dialog" aria-modal="true">
+    <div class="modal">
+      <h3 id="report-title">周报草稿</h3>
+      <p class="muted">非强制提交 · 可复制后自行编辑</p>
+      <pre id="report-body"></pre>
+      <div class="actions">
+        <button type="button" class="btn btn-ghost" id="report-close">关闭</button>
+        <button type="button" class="btn btn-primary" id="report-copy">复制草稿</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="./data.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>

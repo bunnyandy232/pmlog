@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>方案 A · 指挥台型 — PMLog</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #e8eef2;
+      --panel: #ffffff;
+      --ink: #15202b;
+      --muted: #5a6a78;
+      --line: #d5dee6;
+      --teal: #0b6e71;
+      --teal-soft: #dff2f2;
+      --amber: #b45309;
+      --rose: #b42318;
+      --green: #067647;
+      --sidebar: #0f2a30;
+      --font: "DM Sans", "Noto Sans SC", sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: var(--font); background: var(--bg); color: var(--ink); display: flex; min-height: 100vh; }
+    .sidebar {
+      width: 220px; background: var(--sidebar); color: #d7e6e8;
+      padding: 22px 14px; display: flex; flex-direction: column; gap: 6px; flex-shrink: 0;
+    }
+    .logo { font-weight: 700; font-size: 18px; color: #fff; letter-spacing: -0.02em; padding: 6px 12px 20px; }
+    .logo span { color: #7ad4d0; }
+    .nav a {
+      display: block; padding: 10px 12px; border-radius: 8px; color: #b7cbce;
+      text-decoration: none; font-size: 13.5px; font-weight: 500;
+    }
+    .nav a.active, .nav a:hover { background: rgba(122, 212, 208, 0.12); color: #fff; }
+    .role {
+      margin-top: auto; padding: 12px; border-radius: 10px;
+      background: rgba(255,255,255,0.06); font-size: 12px; line-height: 1.5;
+    }
+    .main { flex: 1; padding: 22px 26px; overflow: auto; }
+    .top { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px; }
+    .top h1 { font-size: 24px; letter-spacing: -0.02em; }
+    .top p { color: var(--muted); font-size: 13px; margin-top: 4px; }
+    .actions { display: flex; gap: 8px; }
+    .btn {
+      border: none; border-radius: 9px; padding: 9px 14px; font-family: inherit;
+      font-size: 13px; font-weight: 600; cursor: pointer;
+    }
+    .btn-primary { background: var(--teal); color: #fff; }
+    .btn-ghost { background: var(--panel); color: var(--ink); border: 1px solid var(--line); }
+    .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+    .kpi {
+      background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px;
+    }
+    .kpi .label { font-size: 12px; color: var(--muted); }
+    .kpi .value { font-size: 26px; font-weight: 700; margin-top: 4px; letter-spacing: -0.03em; }
+    .kpi .hint { font-size: 11px; color: var(--teal); margin-top: 4px; }
+    .grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 14px; margin-bottom: 14px; }
+    .panel {
+      background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px;
+    }
+    .panel h2 { font-size: 15px; margin-bottom: 12px; display: flex; justify-content: space-between; }
+    .panel h2 a { font-size: 12px; color: var(--teal); text-decoration: none; font-weight: 600; }
+    .proj { display: flex; flex-direction: column; gap: 10px; }
+    .proj-row {
+      display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center;
+      padding: 10px 0; border-bottom: 1px solid var(--line);
+    }
+    .proj-row:last-child { border-bottom: none; }
+    .proj-name { font-size: 13.5px; font-weight: 600; }
+    .proj-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .bar { height: 6px; background: #e8eef2; border-radius: 99px; margin-top: 8px; overflow: hidden; }
+    .bar > i { display: block; height: 100%; background: var(--teal); border-radius: 99px; }
+    .pct { font-size: 13px; font-weight: 700; color: var(--teal); }
+    .matrix {
+      display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 8px; min-height: 260px;
+    }
+    .quad {
+      border-radius: 10px; padding: 10px; border: 1px dashed var(--line);
+      background: #f7fafb;
+    }
+    .quad.q1 { background: #fef3f2; border-color: #fecdca; }
+    .quad.q2 { background: #fffaeb; border-color: #fedf89; }
+    .quad.q3 { background: var(--teal-soft); border-color: #9ed9d7; }
+    .quad h3 { font-size: 11px; font-weight: 700; margin-bottom: 8px; color: var(--muted); letter-spacing: 0.02em; }
+    .chip {
+      display: block; font-size: 12px; background: #fff; border: 1px solid var(--line);
+      border-radius: 7px; padding: 6px 8px; margin-bottom: 6px; line-height: 1.35;
+    }
+    .feed { display: flex; flex-direction: column; gap: 10px; }
+    .log {
+      display: grid; grid-template-columns: 64px 1fr; gap: 10px; font-size: 13px;
+      padding-bottom: 10px; border-bottom: 1px solid var(--line);
+    }
+    .log time { color: var(--muted); font-size: 12px; }
+    .log strong { font-weight: 600; }
+    .log span { color: var(--muted); }
+    .back {
+      position: fixed; top: 16px; right: 16px; z-index: 10;
+      background: var(--ink); color: #fff; text-decoration: none;
+      font-size: 12px; font-weight: 600; padding: 8px 12px; border-radius: 8px;
+    }
+    @media (max-width: 960px) {
+      body { flex-direction: column; }
+      .sidebar { width: 100%; }
+      .kpis, .grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <a class="back" href="./index.html">← 返回定稿说明（本页为历史方案 A）</a>
+  <aside class="sidebar">
+    <div class="logo">PM<span>Log</span></div>
+    <nav class="nav">
+      <a class="active" href="#">工作台</a>
+      <a href="#">目标分配</a>
+      <a href="#">全部项目</a>
+      <a href="#">全员日志</a>
+      <a href="#">周报中心</a>
+      <a href="#">成员管理</a>
+    </nav>
+    <div class="role">当前角色<br /><strong style="color:#fff">部门领导 · 张工</strong><br />可查看全部员工</div>
+  </aside>
+  <main class="main">
+    <div class="top">
+      <div>
+        <h1>部门指挥台</h1>
+        <p>本周概览 · 2026-11-17 — 11-23</p>
+      </div>
+      <div class="actions">
+        <button class="btn btn-ghost">导出周报包</button>
+        <button class="btn btn-primary">+ 新建目标并指派</button>
+      </div>
+    </div>
+    <section class="kpis">
+      <div class="kpi"><div class="label">进行中项目</div><div class="value">12</div><div class="hint">3 项本周有进度</div></div>
+      <div class="kpi"><div class="label">本周日志条数</div><div class="value">86</div><div class="hint">覆盖 8 / 9 人</div></div>
+      <div class="kpi"><div class="label">待审周报</div><div class="value">4</div><div class="hint">截止周五 18:00</div></div>
+      <div class="kpi"><div class="label">逾期任务</div><div class="value" style="color:var(--rose)">2</div><div class="hint">需今日跟进</div></div>
+    </section>
+    <section class="grid">
+      <div class="panel">
+        <h2>全员项目进度 <a href="#">查看全部</a></h2>
+        <div class="proj">
+          <div class="proj-row">
+            <div>
+              <div class="proj-name">监控告警降噪改造</div>
+              <div class="proj-meta">负责人 李明 · 截止日期 11-28</div>
+              <div class="bar"><i style="width:72%"></i></div>
+            </div>
+            <div class="pct">72%</div>
+          </div>
+          <div class="proj-row">
+            <div>
+              <div class="proj-name">CI 流水线标准化</div>
+              <div class="proj-meta">负责人 王芳 · 截止日期 12-05</div>
+              <div class="bar"><i style="width:45%"></i></div>
+            </div>
+            <div class="pct">45%</div>
+          </div>
+          <div class="proj-row">
+            <div>
+              <div class="proj-name">权限中台接入</div>
+              <div class="proj-meta">负责人 赵强 · 截止日期 11-25 · 已逾期</div>
+              <div class="bar"><i style="width:38%;background:var(--rose)"></i></div>
+            </div>
+            <div class="pct" style="color:var(--rose)">38%</div>
+          </div>
+          <div class="proj-row">
+            <div>
+              <div class="proj-name">日志采集 Agent 升级</div>
+              <div class="proj-meta">负责人 陈雨 · 截止日期 12-12</div>
+              <div class="bar"><i style="width:20%"></i></div>
+            </div>
+            <div class="pct">20%</div>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <h2>部门优先级分布 <a href="#">按人筛选</a></h2>
+        <div class="matrix">
+          <div class="quad q1">
+            <h3>紧急且重要</h3>
+            <div class="chip">权限中台联调阻塞</div>
+            <div class="chip">生产告警误报排查</div>
+          </div>
+          <div class="quad q2">
+            <h3>紧急不重要</h3>
+            <div class="chip">临时统计口径确认</div>
+          </div>
+          <div class="quad q3">
+            <h3>不紧急重要</h3>
+            <div class="chip">CI 模板沉淀</div>
+            <div class="chip">值班手册改版</div>
+          </div>
+          <div class="quad">
+            <h3>不紧急不重要</h3>
+            <div class="chip">工具调研备忘</div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section class="panel">
+      <h2>最新工作日志动态 <a href="#">进入全员日志</a></h2>
+      <div class="feed">
+        <div class="log"><time>14:20</time><div><strong>李明</strong> · 监控告警降噪改造<br /><span>完成规则白名单第二批，误报率从 18% 降到 9%。</span></div></div>
+        <div class="log"><time>13:05</time><div><strong>王芳</strong> · CI 流水线标准化<br /><span>新增 Java 模板，已在 2 个试点仓库验证通过。</span></div></div>
+        <div class="log"><time>11:40</time><div><strong>赵强</strong> · 权限中台接入<br /><span>等待对方提供测试环境账号，进度暂缓，已升级风险。</span></div></div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

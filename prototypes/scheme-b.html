@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>方案 B · 四象限优先 — PMLog</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #e4e9f0;
+      --panel: #f7f9fc;
+      --ink: #1c2430;
+      --muted: #627084;
+      --line: #cfd8e3;
+      --coral: #e4572e;
+      --blue: #2f5d8c;
+      --soft-blue: #d9e6f4;
+      --green: #1f7a5c;
+      --font: "IBM Plex Sans", "Noto Sans SC", sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font); color: var(--ink); min-height: 100vh;
+      background:
+        linear-gradient(135deg, #dfe7f1 0%, #e8edf3 40%, #dde8e4 100%);
+    }
+    .shell { max-width: 1280px; margin: 0 auto; padding: 18px 20px 40px; }
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 16px; gap: 12px; flex-wrap: wrap;
+    }
+    .brand { display: flex; align-items: baseline; gap: 10px; }
+    .brand h1 { font-size: 22px; letter-spacing: -0.03em; }
+    .brand h1 em { font-style: normal; color: var(--blue); }
+    .badge {
+      font-size: 11px; font-weight: 600; background: var(--soft-blue); color: var(--blue);
+      padding: 4px 9px; border-radius: 999px;
+    }
+    .top-actions { display: flex; gap: 8px; }
+    .btn {
+      border: none; border-radius: 9px; padding: 9px 14px; font-family: inherit;
+      font-size: 13px; font-weight: 600; cursor: pointer;
+    }
+    .btn-coral { background: var(--coral); color: #fff; }
+    .btn-blue { background: var(--blue); color: #fff; }
+    .btn-ghost { background: #fff; border: 1px solid var(--line); color: var(--ink); }
+    .layout { display: grid; grid-template-columns: 1fr 300px; gap: 14px; }
+    @media (max-width: 960px) { .layout { grid-template-columns: 1fr; } }
+    .matrix-wrap {
+      background: rgba(255,255,255,0.72); border: 1px solid var(--line);
+      border-radius: 16px; padding: 14px; backdrop-filter: blur(6px);
+    }
+    .matrix-head {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 12px;
+    }
+    .matrix-head h2 { font-size: 16px; }
+    .matrix-head span { font-size: 12px; color: var(--muted); }
+    .axes {
+      display: grid;
+      grid-template-columns: 28px 1fr 1fr;
+      grid-template-rows: auto 1fr 1fr;
+      gap: 8px; min-height: 520px;
+    }
+    .axis-x, .axis-y {
+      font-size: 11px; font-weight: 700; color: var(--muted); letter-spacing: 0.04em;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .axis-y { writing-mode: vertical-rl; transform: rotate(180deg); }
+    .axis-x { grid-column: 2 / 4; }
+    .quad {
+      border-radius: 12px; padding: 12px; min-height: 220px;
+      border: 1px solid var(--line); background: #fff;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .quad.q1 { border-color: #f3c0b2; box-shadow: inset 0 0 0 1px rgba(228,87,46,0.08); }
+    .quad.q2 { border-color: #f0d2a8; }
+    .quad.q3 { border-color: #b9d0e8; }
+    .quad h3 {
+      font-size: 12px; font-weight: 700; display: flex; justify-content: space-between;
+    }
+    .quad.q1 h3 { color: var(--coral); }
+    .quad.q3 h3 { color: var(--blue); }
+    .task {
+      border: 1px solid var(--line); border-radius: 10px; padding: 10px;
+      background: var(--panel); cursor: grab;
+    }
+    .task .t { font-size: 13px; font-weight: 600; line-height: 1.35; }
+    .task .m { font-size: 11px; color: var(--muted); margin-top: 4px; display: flex; justify-content: space-between; }
+    .task .prog {
+      margin-top: 8px; height: 4px; background: #e6ebf2; border-radius: 99px; overflow: hidden;
+    }
+    .task .prog i { display: block; height: 100%; background: var(--blue); }
+    .task.urgent .prog i { background: var(--coral); }
+    .side {
+      background: #fff; border: 1px solid var(--line); border-radius: 16px;
+      padding: 14px; display: flex; flex-direction: column; gap: 12px;
+    }
+    .side h2 { font-size: 15px; }
+    .side .sub { font-size: 12px; color: var(--muted); margin-top: -6px; }
+    .timeline { display: flex; flex-direction: column; gap: 0; flex: 1; }
+    .entry {
+      display: grid; grid-template-columns: 52px 1fr; gap: 8px;
+      padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 12.5px;
+    }
+    .entry time { color: var(--muted); font-variant-numeric: tabular-nums; }
+    .entry .body strong { display: block; margin-bottom: 2px; font-size: 13px; }
+    .entry .body p { color: var(--muted); line-height: 1.45; }
+    .composer {
+      border: 1px dashed var(--line); border-radius: 10px; padding: 10px;
+      background: var(--panel);
+    }
+    .composer textarea {
+      width: 100%; border: none; background: transparent; resize: none;
+      font-family: inherit; font-size: 13px; outline: none; min-height: 64px; color: var(--ink);
+    }
+    .composer .row { display: flex; justify-content: space-between; align-items: center; }
+    .composer select {
+      border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px;
+      font-family: inherit; font-size: 12px; background: #fff;
+    }
+    .back {
+      display: inline-block; margin-bottom: 10px; color: var(--blue);
+      text-decoration: none; font-size: 12px; font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <a class="back" href="./index.html">← 返回定稿说明（本页为历史方案 B）</a>
+    <header class="topbar">
+      <div class="brand">
+        <h1>PM<em>Log</em></h1>
+        <span class="badge">普通员工 · 李明</span>
+      </div>
+      <div class="top-actions">
+        <button class="btn btn-ghost">我的项目</button>
+        <button class="btn btn-coral">写日志</button>
+        <button class="btn btn-blue">生成周报</button>
+      </div>
+    </header>
+    <div class="layout">
+      <section class="matrix-wrap">
+        <div class="matrix-head">
+          <h2>今日工作矩阵</h2>
+          <span>拖拽任务卡片可调整象限 · 仅显示指派给我的任务</span>
+        </div>
+        <div class="axes">
+          <div></div>
+          <div class="axis-x">← 紧急 ———————————————— 不紧急 →</div>
+          <div class="axis-y">重要 ↔ 不重要</div>
+          <div class="quad q1">
+            <h3>紧急且重要 <span>2</span></h3>
+            <div class="task urgent">
+              <div class="t">生产告警误报规则收敛</div>
+              <div class="m"><span>监控告警降噪</span><span>截止今天</span></div>
+              <div class="prog"><i style="width:65%"></i></div>
+            </div>
+            <div class="task urgent">
+              <div class="t">联调阻塞升级说明</div>
+              <div class="m"><span>跨组协同</span><span>今天下午</span></div>
+              <div class="prog"><i style="width:30%"></i></div>
+            </div>
+          </div>
+          <div class="quad q2">
+            <h3>紧急不重要 <span>1</span></h3>
+            <div class="task">
+              <div class="t">回复临时数据口径邮件</div>
+              <div class="m"><span>事务</span><span>今早</span></div>
+              <div class="prog"><i style="width:90%"></i></div>
+            </div>
+          </div>
+          <div class="quad q3">
+            <h3>不紧急重要 <span>2</span></h3>
+            <div class="task">
+              <div class="t">白名单规则第三批整理</div>
+              <div class="m"><span>监控告警降噪</span><span>11-28</span></div>
+              <div class="prog"><i style="width:40%"></i></div>
+            </div>
+            <div class="task">
+              <div class="t">降噪效果复盘文档</div>
+              <div class="m"><span>知识沉淀</span><span>12-01</span></div>
+              <div class="prog"><i style="width:10%"></i></div>
+            </div>
+          </div>
+          <div class="quad">
+            <h3>不紧急不重要 <span>1</span></h3>
+            <div class="task">
+              <div class="t">开源告警工具调研备忘</div>
+              <div class="m"><span>学习</span><span>无截止</span></div>
+              <div class="prog"><i style="width:5%"></i></div>
+            </div>
+          </div>
+        </div>
+      </section>
+      <aside class="side">
+        <div>
+          <h2>今日工作日志</h2>
+          <p class="sub">围绕项目主线记录，自动进入本周周报素材</p>
+        </div>
+        <div class="timeline">
+          <div class="entry">
+            <time>14:20</time>
+            <div class="body">
+              <strong>规则白名单第二批上线</strong>
+              <p>误报率 18% → 9%，关联任务：生产告警误报规则收敛</p>
+            </div>
+          </div>
+          <div class="entry">
+            <time>11:10</time>
+            <div class="body">
+              <strong>与值班组对齐抑制窗口</strong>
+              <p>细项：确认夜间维护窗口不触发工单</p>
+            </div>
+          </div>
+          <div class="entry">
+            <time>09:30</time>
+            <div class="body">
+              <strong>梳理昨日遗留误报样本</strong>
+              <p>收集 27 条样本，标注 4 类根因</p>
+            </div>
+          </div>
+        </div>
+        <div class="composer">
+          <textarea placeholder="继续记录一条工作日志…"></textarea>
+          <div class="row">
+            <select>
+              <option>关联：生产告警误报规则收敛</option>
+              <option>关联：白名单规则第三批整理</option>
+            </select>
+            <button class="btn btn-blue" style="padding:6px 10px;font-size:12px">发布</button>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+</body>
+</html>

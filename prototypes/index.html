@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PMLog — 登录</title>
+  <link rel="stylesheet" href="./app.css" />
+</head>
+<body>
+  <div class="login-page">
+    <div class="login-card">
+      <div class="brand">PM<span>Log</span></div>
+      <p class="lead">技术部门工作日志与项目管理。请选择本人身份进入（原型演示，无需密码）。</p>
+
+      <form id="login-form">
+        <label for="user-select">登录身份</label>
+        <select id="user-select" required>
+          <option value="" disabled selected>请选择…</option>
+        </select>
+        <p class="hint">仅「王蕊 · 中心主管」为领导角色（含项目中心）；其余为员工角色（我的工作）。</p>
+        <button type="submit" class="btn btn-primary">进入系统</button>
+      </form>
+
+      <p class="path">本地打开：file:///d:/cursor/pmlog/prototypes/index.html</p>
+    </div>
+  </div>
+
+  <script src="./data.js"></script>
+  <script>
+    (function () {
+      var sel = document.getElementById("user-select");
+      var leaders = PMLOG.USERS.filter(function (u) { return u.role === "leader"; });
+      var employees = PMLOG.USERS.filter(function (u) { return u.role === "employee"; });
+
+      var gLead = document.createElement("optgroup");
+      gLead.label = "领导";
+      leaders.forEach(function (u) {
+        var o = document.createElement("option");
+        o.value = u.id;
+        o.textContent = u.name + " · " + u.line;
+        gLead.appendChild(o);
+      });
+      sel.appendChild(gLead);
+
+      PMLOG.LINE_ORDER.forEach(function (line) {
+        if (line === "中心主管") return;
+        var list = employees.filter(function (u) { return u.line === line; });
+        if (!list.length) return;
+        var g = document.createElement("optgroup");
+        g.label = line;
+        list.forEach(function (u) {
+          var o = document.createElement("option");
+          o.value = u.id;
+          o.textContent = u.name;
+          g.appendChild(o);
+        });
+        sel.appendChild(g);
+      });
+
+      var last = localStorage.getItem("pmlog_user");
+      if (last && PMLOG.userById(last)) sel.value = last;
+
+      document.getElementById("login-form").addEventListener("submit", function (e) {
+        e.preventDefault();
+        var id = sel.value;
+        if (!id) return;
+        localStorage.setItem("pmlog_user", id);
+        location.href = "./app.html?user=" + encodeURIComponent(id);
+      });
+    })();
+  </script>
+</body>
+</html>
