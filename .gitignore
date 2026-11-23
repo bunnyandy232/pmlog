@@ -11,3 +11,5 @@ Thumbs.db
 # 本地截图与临时文件
 prototypes/*.png
 *.xlsx
+.vercel
+.env*
