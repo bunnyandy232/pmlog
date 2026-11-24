@@ -1,0 +1,15 @@
+{
+  "name": "pmlog",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "config": "node scripts/write-config.mjs",
+    "seed": "node supabase/seed.mjs",
+    "setup": "node scripts/write-config.mjs && node supabase/seed.mjs",
+    "serve": "npx --yes serve prototypes -p 5173",
+    "build": "node scripts/write-config.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.1"
+  }
+}

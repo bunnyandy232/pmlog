@@ -1,74 +1,54 @@
-/* PMLog app logic — Scheme A shell */
-(function () {
-  var params = new URLSearchParams(location.search);
-  var userId = params.get("user") || localStorage.getItem("pmlog_user");
-  var currentUser = userId ? PMLOG.userById(userId) : null;
+/* PMLog app logic — Scheme A shell (Supabase-backed) */
+(async function () {
+  var bootError = document.createElement("div");
+  bootError.style.cssText = "padding:24px;font-family:sans-serif;color:#b42318";
+  var session = null;
+  try {
+    if (!window.PMLOG_CONFIG || !PMLOG_CONFIG.supabaseAnonKey) {
+      throw new Error("缺少 Supabase anon key：请写入 .env.local 后执行 node scripts/write-config.mjs");
+    }
+    session = await PMLOG.Auth.restoreSession();
+    if (!session || !session.userId) {
+      location.href = "index.html";
+      return;
+    }
+    if (session.mustChangePassword) {
+      location.href = "index.html";
+      return;
+    }
+    await PMLOG.Auth.loadUsers();
+  } catch (err) {
+    document.body.innerHTML = "";
+    bootError.textContent = "启动失败：" + (err.message || String(err));
+    document.body.appendChild(bootError);
+    return;
+  }
+
+  var userId = session.userId;
+  var currentUser = PMLOG.userById(userId);
   if (!currentUser) {
+    await PMLOG.Auth.clearSession();
     location.href = "index.html";
     return;
   }
   localStorage.setItem("pmlog_user", currentUser.id);
   var isLeader = currentUser.role === "leader";
 
-  var STORE_KEY = "pmlog_store_v1";
-  var SEED_VERSION = "2026-11-23-b";
-  var projects, milestones, logs, nextId;
+  var projects = [];
+  var milestones = [];
+  var logs = [];
 
-  function persistStore() {
-    try {
-      localStorage.setItem(STORE_KEY, JSON.stringify({
-        seedVersion: SEED_VERSION,
-        nextId: nextId,
-        projects: projects,
-        milestones: milestones,
-        logs: logs
-      }));
-    } catch (err) {
-      console.warn("persistStore failed", err);
-    }
+  function syncFromStore() {
+    projects = PMLOG.Store.projects.slice();
+    milestones = PMLOG.Store.milestones.slice();
+    logs = PMLOG.Store.logs.slice();
   }
 
-  function syncSpecialLogsToMilestones() {
-    logs.forEach(function (l) {
-      if (l.type !== "special" || !l.projectId) return;
-      var exists = milestones.some(function (m) {
-        return m.fromLog && m.projectId === l.projectId && m.text === l.content && m.authorId === l.authorId;
-      });
-      if (exists) return;
-      milestones.push({
-        id: "m" + (nextId++),
-        projectId: l.projectId,
-        date: l.date,
-        text: l.content,
-        authorId: l.authorId,
-        fromLog: true
-      });
-    });
+  async function loadStore() {
+    await PMLOG.Store.reload();
+    syncFromStore();
   }
-
-  function loadStore() {
-    var raw = null;
-    try { raw = localStorage.getItem(STORE_KEY); } catch (e) { raw = null; }
-    if (raw) {
-      try {
-        var stored = JSON.parse(raw);
-        if (stored && stored.seedVersion === SEED_VERSION && Array.isArray(stored.projects)) {
-          projects = stored.projects;
-          milestones = stored.milestones || [];
-          logs = stored.logs || [];
-          nextId = stored.nextId || 1000;
-          return;
-        }
-      } catch (e) { /* fall through to seed */ }
-    }
-    projects = JSON.parse(JSON.stringify(PMLOG.PROJECTS));
-    milestones = JSON.parse(JSON.stringify(PMLOG.MILESTONES));
-    logs = JSON.parse(JSON.stringify(PMLOG.LOGS));
-    nextId = 1000;
-    syncSpecialLogsToMilestones();
-    persistStore();
-  }
-  loadStore();
+  await loadStore();
 
   function today() {
     var d = new Date();
@@ -204,12 +184,12 @@
   document.getElementById("top-line").textContent = currentUser.line;
   document.getElementById("top-name").textContent = currentUser.name;
   document.getElementById("side-role").innerHTML =
-    "当前角色<br><strong>" + (isLeader ? "部门领导" : "普通员工") + " · " + currentUser.name + "</strong><br>" +
+    "当前角色<br><strong>" + (isLeader ? "管理员/领导" : "普通员工") + " · " + currentUser.name + "</strong><br>" +
     (isLeader ? "可查看全部员工" : "仅本人工作内容");
   function updatePageChrome(section) {
     if (section === "monitor") {
       document.getElementById("page-title").textContent = "项目中心";
-      document.getElementById("page-subtitle").textContent = "部门全员系统项目与工作日志总览（仅领导可见）。";
+      document.getElementById("page-subtitle").textContent = "项目总览 · 项目明细 · 日志明细";
     } else {
       document.getElementById("page-title").textContent = "我的工作";
       document.getElementById("page-subtitle").textContent = isLeader
@@ -243,15 +223,23 @@
     applySidebarCollapsed(!sidebar.classList.contains("collapsed"));
   });
 
-  function showSection(name) {
+  function showSection(name, opts) {
+    opts = opts || {};
     document.querySelectorAll(".section").forEach(function (s) {
       s.classList.toggle("active", s.getAttribute("data-section") === name);
     });
     document.querySelectorAll(".nav-link").forEach(function (a) {
       a.classList.toggle("active", a.getAttribute("data-section") === name);
     });
-    location.hash = "sec-" + name;
+    if (!opts.keepHash) location.hash = "sec-" + name;
     updatePageChrome(name);
+  }
+  function scrollToAnchor(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    setTimeout(function () {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 40);
   }
   document.querySelectorAll(".nav-link").forEach(function (a) {
     a.addEventListener("click", function (e) {
@@ -259,10 +247,26 @@
       showSection(a.getAttribute("data-section"));
     });
   });
-  var hash = (location.hash || "").replace("#sec-", "");
+  document.querySelectorAll(".nav-anchor").forEach(function (a) {
+    a.addEventListener("click", function (e) {
+      e.preventDefault();
+      var section = a.getAttribute("data-section");
+      var anchor = a.getAttribute("data-anchor");
+      showSection(section, { keepHash: true });
+      location.hash = anchor || "";
+      scrollToAnchor(anchor);
+    });
+  });
+  var rawHash = (location.hash || "").replace(/^#/, "");
+  var hash = rawHash.replace(/^sec-/, "");
   if (hash === "monitor" && !isLeader) hash = "work";
   if (hash === "projects" || hash === "logs") hash = "work";
-  showSection(hash === "monitor" || hash === "work" ? hash : (isLeader ? "monitor" : "work"));
+  if (rawHash.indexOf("mod-") === 0 && isLeader) {
+    showSection("monitor", { keepHash: true });
+    scrollToAnchor(rawHash);
+  } else {
+    showSection(hash === "monitor" || hash === "work" ? hash : (isLeader ? "monitor" : "work"));
+  }
 
   /* Monitor / 项目中心 */
   var monitorSort = { key: "assignedAt", dir: -1 }; /* 默认按分配时间新→旧 */
@@ -475,14 +479,6 @@
       renderMonitor();
     });
   }
-  var filterClear = document.getElementById("monitor-filter-clear");
-  if (filterClear) {
-    filterClear.addEventListener("click", function () {
-      monitorFilterIds = [];
-      fillMonitorFilter();
-      renderMonitor();
-    });
-  }
   var periodBox = document.getElementById("monitor-log-period");
   if (periodBox) {
     periodBox.addEventListener("click", function (e) {
@@ -496,16 +492,40 @@
     var el = document.getElementById(id);
     if (el) el.addEventListener("change", renderMonitor);
   });
-  var dateReset = document.getElementById("monitor-date-reset");
-  if (dateReset) {
-    dateReset.addEventListener("click", function () {
+  var filtersReset = document.getElementById("monitor-filters-reset");
+  if (filtersReset) {
+    filtersReset.addEventListener("click", function () {
       var s = document.getElementById("monitor-date-start");
       var e = document.getElementById("monitor-date-end");
       if (s) s.value = "";
       if (e) e.value = "";
+      monitorFilterIds = [];
+      fillMonitorFilter();
       renderMonitor();
     });
   }
+
+  /* Back to top */
+  var backTop = document.getElementById("btn-back-top");
+  var scrollRoot = document.querySelector(".main");
+  function currentScrollY() {
+    var mainY = scrollRoot ? scrollRoot.scrollTop : 0;
+    var winY = window.scrollY || document.documentElement.scrollTop || 0;
+    return Math.max(mainY, winY);
+  }
+  function updateBackTop() {
+    if (!backTop) return;
+    backTop.classList.toggle("visible", currentScrollY() > 240);
+  }
+  if (backTop) {
+    backTop.addEventListener("click", function () {
+      if (scrollRoot) scrollRoot.scrollTo({ top: 0, behavior: "smooth" });
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+  }
+  if (scrollRoot) scrollRoot.addEventListener("scroll", updateBackTop, { passive: true });
+  window.addEventListener("scroll", updateBackTop, { passive: true });
+  updateBackTop();
 
   var monitorTable = document.getElementById("monitor-project-table");
   if (monitorTable) {
@@ -845,7 +865,7 @@
   document.getElementById("pf-cancel").addEventListener("click", function () {
     document.getElementById("project-form-wrap").classList.add("hidden");
   });
-  document.getElementById("project-form").addEventListener("submit", function (e) {
+  document.getElementById("project-form").addEventListener("submit", async function (e) {
     e.preventDefault();
     var members = selectedMembers();
     var lead = document.getElementById("pf-lead").value;
@@ -855,6 +875,7 @@
     }
     if (members.length === 1) lead = members[0];
     var id = document.getElementById("pf-id").value;
+    var existing = id ? projectOf(id) : null;
     var payload = {
       name: document.getElementById("pf-name").value.trim(),
       start: document.getElementById("pf-start").value,
@@ -863,25 +884,22 @@
       contact: document.getElementById("pf-contact").value.trim(),
       assignedAt: document.getElementById("pf-assigned").value || today(),
       memberIds: members,
-      leadId: lead
+      leadId: lead,
+      urgencyByUser: existing && existing.urgencyByUser ? existing.urgencyByUser : {},
+      status: existing && existing.status ? existing.status : "active",
+      progress: existing ? existing.progress || 0 : 0,
+      completedAt: existing ? existing.completedAt : null
     };
-    if (id) {
-      var p = projectOf(id);
-      Object.assign(p, payload);
-      if (!p.urgencyByUser) p.urgencyByUser = {};
-    } else {
-      projects.push(Object.assign({
-        id: "p" + (nextId++),
-        urgencyByUser: {},
-        progress: 0,
-        status: "active"
-      }, payload));
+    try {
+      await PMLOG.Store.upsertProject(payload, id || null);
+      document.getElementById("project-form-wrap").classList.add("hidden");
+      await refreshAll();
+    } catch (err) {
+      alert("保存失败：" + (err.message || String(err)));
     }
-    document.getElementById("project-form-wrap").classList.add("hidden");
-    refreshAll();
   });
 
-  document.getElementById("project-list").addEventListener("click", function (e) {
+  document.getElementById("project-list").addEventListener("click", async function (e) {
     var t = e.target.closest("[data-edit-project], [data-del-project], [data-ms-add], [data-complete-project]");
     if (!t) return;
     if (t.getAttribute("data-edit-project")) {
@@ -890,9 +908,12 @@
     }
     if (t.getAttribute("data-del-project")) {
       var id = t.getAttribute("data-del-project");
-      if (confirm("确认删除该系统项目？")) {
-        projects = projects.filter(function (p) { return p.id !== id; });
-        refreshAll();
+      if (!confirm("确认删除该系统项目？")) return;
+      try {
+        await PMLOG.Store.deleteProject(id);
+        await refreshAll();
+      } catch (err) {
+        alert("删除失败：" + (err.message || String(err)));
       }
     }
     if (t.getAttribute("data-ms-add")) {
@@ -900,39 +921,49 @@
       var input = document.querySelector("[data-ms-input='" + pid + "']");
       var text = input && input.value.trim();
       if (!text) return;
-      milestones.push({
-        id: "m" + (nextId++),
-        projectId: pid,
-        date: today(),
-        text: text,
-        authorId: currentUser.id
-      });
-      refreshAll();
+      try {
+        await PMLOG.Store.addMilestone({
+          projectId: pid,
+          date: today(),
+          text: text,
+          authorId: currentUser.id,
+          fromLog: false
+        });
+        await refreshAll();
+      } catch (err) {
+        alert("添加失败：" + (err.message || String(err)));
+      }
     }
     if (t.getAttribute("data-complete-project")) {
       var cid = t.getAttribute("data-complete-project");
       var cp = projectOf(cid);
       if (!cp || isDone(cp)) return;
       if (!confirm("确认将「" + cp.name + "」标记为已完成？")) return;
-      cp.status = "done";
-      cp.progress = 100;
-      cp.completedAt = today();
-      refreshAll();
+      try {
+        await PMLOG.Store.completeProject(cid, today());
+        await refreshAll();
+      } catch (err) {
+        alert("操作失败：" + (err.message || String(err)));
+      }
     }
   });
-  document.getElementById("project-list").addEventListener("change", function (e) {
+  document.getElementById("project-list").addEventListener("change", async function (e) {
     var t = e.target;
-    if (t.getAttribute("data-set-importance")) {
-      var p = projectOf(t.getAttribute("data-set-importance"));
-      p.importance = t.value || null;
-      refreshAll();
-    }
-    if (t.getAttribute("data-set-urgency")) {
-      var p2 = projectOf(t.getAttribute("data-set-urgency"));
-      if (!p2.urgencyByUser) p2.urgencyByUser = {};
-      if (t.value) p2.urgencyByUser[currentUser.id] = t.value;
-      else delete p2.urgencyByUser[currentUser.id];
-      refreshAll();
+    try {
+      if (t.getAttribute("data-set-importance")) {
+        await PMLOG.Store.setImportance(t.getAttribute("data-set-importance"), t.value || null);
+        await refreshAll();
+      }
+      if (t.getAttribute("data-set-urgency")) {
+        await PMLOG.Store.setUrgency(
+          t.getAttribute("data-set-urgency"),
+          currentUser.id,
+          t.value || null
+        );
+        await refreshAll();
+      }
+    } catch (err) {
+      alert("更新失败：" + (err.message || String(err)));
     }
   });
 
@@ -947,7 +978,7 @@
   document.getElementById("lf-type").addEventListener("change", function () {
     document.getElementById("lf-project-row").classList.toggle("hidden", this.value !== "special");
   });
-  document.getElementById("log-form").addEventListener("submit", function (e) {
+  document.getElementById("log-form").addEventListener("submit", async function (e) {
     e.preventDefault();
     var type = document.getElementById("lf-type").value;
     var projectId = type === "special" ? document.getElementById("lf-project").value : null;
@@ -956,29 +987,30 @@
     if (!content) return;
     var now = new Date();
     var time = pad(now.getHours()) + ":" + pad(now.getMinutes());
-    logs.unshift({
-      id: "l" + (nextId++),
-      type: type,
-      projectId: projectId,
-      authorId: currentUser.id,
-      date: today(),
-      time: time,
-      content: content
-    });
-    /* 专项日志同步写入对应系统项目的里程碑节点 */
-    if (type === "special" && projectId) {
-      milestones.push({
-        id: "m" + (nextId++),
+    try {
+      await PMLOG.Store.addLog({
+        type: type,
         projectId: projectId,
-        date: today(),
-        text: content,
         authorId: currentUser.id,
-        fromLog: true
+        date: today(),
+        time: time,
+        content: content
       });
+      if (type === "special" && projectId) {
+        await PMLOG.Store.addMilestone({
+          projectId: projectId,
+          date: today(),
+          text: content,
+          authorId: currentUser.id,
+          fromLog: true
+        });
+      }
+      document.getElementById("lf-content").value = "";
+      await refreshAll();
+      showSection("work");
+    } catch (err) {
+      alert("保存日志失败：" + (err.message || String(err)));
     }
-    document.getElementById("lf-content").value = "";
-    refreshAll();
-    showSection("work");
   });
 
   function renderLogs() {
@@ -1114,15 +1146,16 @@
   document.getElementById("report-modal").addEventListener("click", function (e) {
     if (e.target.id === "report-modal") this.classList.remove("open");
   });
-  document.getElementById("btn-logout").addEventListener("click", function () {
+  document.getElementById("btn-logout").addEventListener("click", async function () {
+    if (PMLOG.Auth) await PMLOG.Auth.clearSession();
     location.href = "index.html";
   });
 
-  function refreshAll() {
-    persistStore();
+  async function refreshAll() {
+    await loadStore();
     renderMonitor();
     renderProjects();
     renderLogs();
   }
-  refreshAll();
+  await refreshAll();
 })();

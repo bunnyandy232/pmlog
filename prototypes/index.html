@@ -18,63 +18,162 @@
   <div class="login-page">
     <div class="login-card">
       <div class="brand">PM<span>Log</span></div>
-      <p class="lead">技术部门工作日志与项目管理。请选择本人身份进入（原型演示，无需密码）。</p>
+      <p class="lead" id="login-lead">技术部门工作日志与项目管理。账号由管理员分配，首次登录须修改密码。</p>
 
       <form id="login-form">
-        <label for="user-select">登录身份</label>
-        <select id="user-select" required>
-          <option value="" disabled selected>请选择…</option>
-        </select>
-        <p class="hint">仅「王蕊 · 中心主管」为领导角色（含项目中心）；其余为员工角色（我的工作）。</p>
-        <button type="submit" class="btn btn-primary">进入系统</button>
+        <label for="login-username">用户名</label>
+        <input id="login-username" name="username" autocomplete="username" required placeholder="请输入用户名" />
+        <label for="login-password">密码</label>
+        <input id="login-password" name="password" type="password" autocomplete="current-password" required placeholder="请输入密码" />
+        <p class="form-error hidden" id="login-error"></p>
+        <button type="submit" class="btn btn-primary">登录</button>
       </form>
 
-      <p class="path">演示原型 · 选择身份后进入系统</p>
+      <form id="change-form" class="hidden">
+        <p class="hint" style="margin-bottom:12px">为保障账号安全，请先修改密码后再进入系统。忘记密码请联系管理员重置。</p>
+        <label for="change-old">当前密码</label>
+        <input id="change-old" type="password" autocomplete="current-password" required />
+        <label for="change-new">新密码</label>
+        <input id="change-new" type="password" autocomplete="new-password" required placeholder="至少 6 位" />
+        <label for="change-confirm">确认新密码</label>
+        <input id="change-confirm" type="password" autocomplete="new-password" required />
+        <p class="form-error hidden" id="change-error"></p>
+        <button type="submit" class="btn btn-primary">确认修改并进入</button>
+        <button type="button" class="btn btn-ghost" id="change-cancel" style="width:100%;margin-top:8px;justify-content:center">返回登录</button>
+      </form>
+
+      <p class="path">权限由管理员分配 · 不提供自助找回密码 · 需通过 http 访问（勿用 file://）</p>
     </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script>
+    window.PMLOG_CONFIG = window.PMLOG_CONFIG || {
+      supabaseUrl: "https://kiuhfbaqvgpojgxakvpl.supabase.co",
+      supabaseAnonKey: ""
+    };
+  </script>
   <script src="data.js"></script>
+  <script src="supabase-client.js"></script>
+  <script src="auth.js"></script>
   <script>
     (function () {
-      var sel = document.getElementById("user-select");
-      var leaders = PMLOG.USERS.filter(function (u) { return u.role === "leader"; });
-      var employees = PMLOG.USERS.filter(function (u) { return u.role === "employee"; });
+      var loginForm = document.getElementById("login-form");
+      var changeForm = document.getElementById("change-form");
+      var loginError = document.getElementById("login-error");
+      var changeError = document.getElementById("change-error");
+      var lead = document.getElementById("login-lead");
+      var pendingUser = "";
+      var busy = false;
 
-      var gLead = document.createElement("optgroup");
-      gLead.label = "领导";
-      leaders.forEach(function (u) {
-        var o = document.createElement("option");
-        o.value = u.id;
-        o.textContent = u.name + " · " + u.line;
-        gLead.appendChild(o);
-      });
-      sel.appendChild(gLead);
+      function showError(el, msg) {
+        if (!msg) {
+          el.classList.add("hidden");
+          el.textContent = "";
+          return;
+        }
+        el.textContent = msg;
+        el.classList.remove("hidden");
+      }
 
-      PMLOG.LINE_ORDER.forEach(function (line) {
-        if (line === "中心主管") return;
-        var list = employees.filter(function (u) { return u.line === line; });
-        if (!list.length) return;
-        var g = document.createElement("optgroup");
-        g.label = line;
-        list.forEach(function (u) {
-          var o = document.createElement("option");
-          o.value = u.id;
-          o.textContent = u.name;
-          g.appendChild(o);
-        });
-        sel.appendChild(g);
-      });
+      function enterApp() {
+        location.href = "app.html";
+      }
 
-      var last = localStorage.getItem("pmlog_user");
-      if (last && PMLOG.userById(last)) sel.value = last;
+      function showChange(username) {
+        pendingUser = username;
+        loginForm.classList.add("hidden");
+        changeForm.classList.remove("hidden");
+        lead.textContent = "首次登录或管理员重置后，须修改密码才能继续使用。";
+        document.getElementById("change-old").value = "";
+        document.getElementById("change-new").value = "";
+        document.getElementById("change-confirm").value = "";
+        showError(changeError, "");
+      }
 
-      document.getElementById("login-form").addEventListener("submit", function (e) {
+      function showLogin() {
+        pendingUser = "";
+        changeForm.classList.add("hidden");
+        loginForm.classList.remove("hidden");
+        lead.textContent = "技术部门工作日志与项目管理。账号由管理员分配，首次登录须修改密码。";
+        showError(loginError, "");
+      }
+
+      async function boot() {
+        try {
+          if (!window.PMLOG_CONFIG || !PMLOG_CONFIG.supabaseAnonKey) {
+            showError(loginError, "缺少 config.js，请从 config.example.js 复制并填入 Supabase anon key");
+            return;
+          }
+          var existing = await PMLOG.Auth.restoreSession();
+          if (existing && existing.mustChangePassword) {
+            showChange(existing.username);
+          } else if (existing && existing.userId) {
+            enterApp();
+          }
+        } catch (err) {
+          showError(loginError, err.message || String(err));
+        }
+      }
+
+      loginForm.addEventListener("submit", async function (e) {
         e.preventDefault();
-        var id = sel.value;
-        if (!id) return;
-        localStorage.setItem("pmlog_user", id);
-        location.href = "app.html?user=" + encodeURIComponent(id);
+        if (busy) return;
+        busy = true;
+        showError(loginError, "");
+        try {
+          var username = document.getElementById("login-username").value.trim();
+          var password = document.getElementById("login-password").value;
+          var res = await PMLOG.Auth.login(username, password);
+          if (!res.ok) {
+            showError(loginError, res.error);
+            return;
+          }
+          if (res.mustChangePassword) {
+            showChange(username);
+            return;
+          }
+          enterApp();
+        } catch (err) {
+          showError(loginError, err.message || String(err));
+        } finally {
+          busy = false;
+        }
       });
+
+      changeForm.addEventListener("submit", async function (e) {
+        e.preventDefault();
+        if (busy) return;
+        busy = true;
+        showError(changeError, "");
+        try {
+          var oldP = document.getElementById("change-old").value;
+          var newP = document.getElementById("change-new").value;
+          var confirmP = document.getElementById("change-confirm").value;
+          if (newP !== confirmP) {
+            showError(changeError, "两次输入的新密码不一致");
+            return;
+          }
+          var res = await PMLOG.Auth.changePassword(pendingUser, oldP, newP);
+          if (!res.ok) {
+            showError(changeError, res.error);
+            return;
+          }
+          enterApp();
+        } catch (err) {
+          showError(changeError, err.message || String(err));
+        } finally {
+          busy = false;
+        }
+      });
+
+      document.getElementById("change-cancel").addEventListener("click", async function () {
+        await PMLOG.Auth.clearSession();
+        showLogin();
+      });
+
+      boot();
     })();
   </script>
 </body>

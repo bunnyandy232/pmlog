@@ -57,13 +57,22 @@ a:hover { text-decoration: underline; }
 .login-card label {
   display: block; font-size: 12px; font-weight: 600; margin-bottom: 6px; color: var(--muted);
 }
-.login-card select {
+.login-card select,
+.login-card input[type="text"],
+.login-card input[type="password"],
+.login-card input:not([type]) {
   width: 100%; font-family: inherit; font-size: 14px;
   padding: 10px 12px; border: 1px solid var(--line); border-radius: 9px;
-  background: #fff; margin-bottom: 16px;
+  background: #fff; margin-bottom: 12px;
 }
 .login-card .hint {
   font-size: 12px; color: var(--muted); margin-bottom: 16px; line-height: 1.45;
+}
+.login-card .form-error {
+  font-size: 12px;
+  color: var(--rose);
+  margin: -4px 0 12px;
+  line-height: 1.4;
 }
 .login-card .btn {
   width: 100%; justify-content: center;
@@ -73,9 +82,14 @@ a:hover { text-decoration: underline; }
 }
 
 /* ---- App shell ---- */
-.app-layout { display: flex; min-height: 100vh; }
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
+}
 .sidebar {
-  --sidebar-w: 132px; /* ~1.5x longest menu label */
+  --sidebar-w: 148px;
   width: var(--sidebar-w);
   background: var(--sidebar);
   color: #d7e6e8;
@@ -85,7 +99,12 @@ a:hover { text-decoration: underline; }
   gap: 2px;
   flex-shrink: 0;
   transition: width .2s ease, padding .2s ease;
-  overflow: hidden;
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  position: sticky;
+  top: 0;
+  align-self: stretch;
 }
 .sidebar.collapsed {
   width: 48px;
@@ -107,11 +126,30 @@ a:hover { text-decoration: underline; }
 .sidebar .nav a:hover {
   background: rgba(122, 212, 208, 0.12); color: #fff; text-decoration: none;
 }
+.sidebar .nav-group { margin-bottom: 4px; }
+.sidebar .nav-sub {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 2px 0 6px 8px;
+  border-left: 2px solid rgba(122, 212, 208, 0.25);
+  margin: 2px 0 4px 10px;
+}
+.sidebar .nav-anchor {
+  padding: 5px 8px !important;
+  font-size: 12px !important;
+  font-weight: 400 !important;
+  color: #9bb5b8 !important;
+}
+.sidebar .nav-anchor:hover {
+  color: #fff !important;
+}
 .sidebar.collapsed .nav a {
   text-align: center;
   padding: 10px 4px;
   font-size: 11px;
 }
+.sidebar.collapsed .nav-sub { display: none; }
 .sidebar .role-box {
   margin-top: auto;
   padding: 8px;
@@ -137,7 +175,15 @@ a:hover { text-decoration: underline; }
 }
 .sidebar-toggle:hover { background: rgba(122, 212, 208, 0.15); }
 
-.workspace { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.workspace {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
 .topbar {
   background: var(--panel);
   border-bottom: 1px solid var(--line);
@@ -147,6 +193,7 @@ a:hover { text-decoration: underline; }
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
+  flex-shrink: 0;
 }
 .topbar-meta {
   display: flex;
@@ -165,7 +212,12 @@ a:hover { text-decoration: underline; }
 .topbar-meta .clock { font-variant-numeric: tabular-nums; min-width: 170px; }
 .topbar-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 
-.main { flex: 1; padding: 20px 24px 40px; overflow: auto; }
+.main {
+  flex: 1;
+  padding: 20px 24px 40px;
+  overflow: auto;
+  min-height: 0;
+}
 .main h1 { font-size: 22px; letter-spacing: -0.02em; margin-bottom: 4px; }
 .main .subtitle { color: var(--muted); font-size: 13px; margin-bottom: 18px; }
 .main h2 {
@@ -210,8 +262,42 @@ a:hover { text-decoration: underline; }
   padding: 6px 10px;
   font-size: 12px;
 }
-.monitor-filter {
-  max-height: 200px;
+.monitor-filter-block {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.monitor-filter-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.monitor-filter-label .muted { font-weight: 400; }
+.member-picker.monitor-filter {
+  max-height: none;
+  overflow: visible;
+  border: none;
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+}
+.member-picker.monitor-filter .member-group {
+  padding: 6px 0 8px;
+}
+.member-picker.monitor-filter .member-group + .member-group {
+  border-top: 1px dashed var(--line);
+}
+.member-picker.monitor-filter .member-group-title {
+  margin-bottom: 6px;
+}
+.member-picker.monitor-filter .member-group-body {
+  gap: 5px;
+}
+.member-picker.monitor-filter .member-chip {
+  padding: 3px 8px 3px 6px;
+  font-size: 12px;
+  background: #f4f8f9;
 }
 .project-acc.is-done {
   opacity: 0.92;
@@ -243,6 +329,36 @@ a:hover { text-decoration: underline; }
 .btn-link {
   background: transparent; border: none; color: var(--teal);
   font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; padding: 0;
+}
+.back-top {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  z-index: 1200;
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--teal);
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(26, 35, 50, 0.12);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(8px);
+  transition: opacity .2s ease, transform .2s ease;
+}
+.back-top.visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+.back-top:hover {
+  background: var(--teal-soft);
+  border-color: var(--teal);
 }
 
 .panel {
@@ -858,8 +974,23 @@ th.sortable.desc::after { content: " ▼"; font-size: 10px; color: var(--teal); 
 .modal .actions { display: flex; justify-content: flex-end; gap: 8px; }
 
 @media (max-width: 900px) {
-  .app-layout { flex-direction: column; }
-  .sidebar, .sidebar.collapsed { width: 100%; }
+  .app-layout {
+    flex-direction: column;
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+  .sidebar, .sidebar.collapsed {
+    width: 100%;
+    height: auto;
+    position: static;
+    overflow: visible;
+  }
+  .workspace {
+    height: auto;
+    overflow: visible;
+  }
+  .main { overflow: visible; }
   .kpis, .kpis-5 { grid-template-columns: 1fr 1fr; }
   .work-split { grid-template-columns: 1fr; }
 }

@@ -1,4 +1,6 @@
 {
+  "buildCommand": "npm run build",
+  "outputDirectory": ".",
   "cleanUrls": true,
   "trailingSlash": true,
   "rewrites": [
@@ -7,7 +9,11 @@
     { "source": "/app.html", "destination": "/prototypes/app.html" },
     { "source": "/app.css", "destination": "/prototypes/app.css" },
     { "source": "/app.js", "destination": "/prototypes/app.js" },
-    { "source": "/data.js", "destination": "/prototypes/data.js" }
+    { "source": "/data.js", "destination": "/prototypes/data.js" },
+    { "source": "/auth.js", "destination": "/prototypes/auth.js" },
+    { "source": "/store.js", "destination": "/prototypes/store.js" },
+    { "source": "/supabase-client.js", "destination": "/prototypes/supabase-client.js" },
+    { "source": "/config.js", "destination": "/prototypes/config.js" }
   ],
   "headers": [
     {

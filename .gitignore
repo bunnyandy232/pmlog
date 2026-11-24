@@ -13,3 +13,4 @@ prototypes/*.png
 *.xlsx
 .vercel
 .env*
+prototypes/config.js

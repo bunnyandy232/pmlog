@@ -20,7 +20,14 @@
       <button type="button" class="sidebar-toggle" id="sidebar-toggle" title="展开/隐藏菜单">收起</button>
       <div class="logo"><span class="logo-text">PM</span><span>Log</span></div>
       <nav class="nav" aria-label="主导航">
-        <a href="#sec-monitor" class="nav-link leader-only" data-section="monitor" data-short="中心">项目中心</a>
+        <div class="nav-group leader-only">
+          <a href="#sec-monitor" class="nav-link" data-section="monitor" data-short="中心">项目中心</a>
+          <div class="nav-sub">
+            <a href="#mod-overview" class="nav-anchor" data-section="monitor" data-anchor="mod-overview">项目总览</a>
+            <a href="#mod-projects" class="nav-anchor" data-section="monitor" data-anchor="mod-projects">项目明细</a>
+            <a href="#mod-logs" class="nav-anchor" data-section="monitor" data-anchor="mod-logs">日志明细</a>
+          </div>
+        </div>
         <a href="#sec-work" class="nav-link" data-section="work" data-short="工作">我的工作</a>
       </nav>
       <div class="role-box" id="side-role">当前角色</div>
@@ -52,18 +59,18 @@
         <p class="subtitle" id="page-subtitle"></p>
 
         <section id="sec-monitor" class="section leader-only" data-section="monitor">
-          <div class="panel monitor-board">
+          <div class="panel monitor-board" id="mod-overview">
             <div class="section-head" style="margin-top:0">
-              <h2 style="margin:0">项目中心看板</h2>
+              <h2 style="margin:0">项目总览</h2>
               <div class="date-range">
                 <label for="monitor-date-start">起止时间</label>
                 <input type="date" id="monitor-date-start" />
                 <span class="date-sep">至</span>
                 <input type="date" id="monitor-date-end" />
-                <button type="button" class="btn btn-ghost" id="monitor-date-reset">重置</button>
+                <button type="button" class="btn btn-ghost" id="monitor-filters-reset">重置</button>
               </div>
             </div>
-            <p class="muted" style="margin-bottom:10px">按起止时间与下方牵头人勾选同步汇总；未选日期表示不限制时间。</p>
+            <p class="muted" style="margin-bottom:10px">按起止时间与牵头人勾选同步汇总；未选日期/员工表示不限制。</p>
             <div class="kpis kpis-5">
               <div class="kpi"><div class="label">紧急且重要（进行中）</div><div class="value" id="kpi-q1">0</div><div class="hint">未完成 · Q1</div></div>
               <div class="kpi"><div class="label">进行中项目</div><div class="value" id="kpi-projects">0</div><div class="hint">未完成合计</div></div>
@@ -71,19 +78,14 @@
               <div class="kpi"><div class="label">工作日志</div><div class="value" id="kpi-logs">0</div><div class="hint">录入日落在区间内</div></div>
               <div class="kpi"><div class="label">逾期项目</div><div class="value" id="kpi-overdue">0</div><div class="hint">计划完成早于截止日</div></div>
             </div>
+            <div class="monitor-filter-block">
+              <div class="monitor-filter-label">按牵头人筛选 <span class="muted">可多选 · 不选显示全部</span></div>
+              <div class="member-picker monitor-filter" id="monitor-filter-users"></div>
+            </div>
           </div>
 
-          <div class="panel">
-            <h2>项目中心</h2>
-            <p class="muted" style="margin-bottom:10px">仅领导可见。可按员工筛选系统项目与日志动态。</p>
-            <div class="form-row">
-              <label>按员工筛选 <span class="muted" style="font-weight:400">（可多选；按牵头人匹配，不选则显示全部；同步更新上方看板）</span></label>
-              <div class="member-picker monitor-filter" id="monitor-filter-users"></div>
-              <div class="form-actions" style="margin-top:8px">
-                <button type="button" class="btn btn-ghost" id="monitor-filter-clear">清空筛选</button>
-              </div>
-            </div>
-            <h3>全员系统项目 <span class="muted" style="font-weight:400;font-size:12px">点击项目名展开里程碑 · 点击表头排序</span></h3>
+          <div class="panel" id="mod-projects">
+            <h2>项目明细 <span class="muted" style="font-weight:400;font-size:12px">点击项目名展开里程碑 · 点击表头排序</span></h2>
             <table id="monitor-project-table" class="sortable-table">
               <thead>
                 <tr>
@@ -102,8 +104,11 @@
               </thead>
               <tbody id="monitor-project-body"></tbody>
             </table>
-            <div class="section-head">
-              <h3>近期工作日志动态</h3>
+          </div>
+
+          <div class="panel" id="mod-logs">
+            <div class="section-head" style="margin-top:0">
+              <h2 style="margin:0">日志明细</h2>
               <div class="period-tabs" id="monitor-log-period" role="tablist" aria-label="日志时段">
                 <button type="button" class="period-tab active" data-period="week">本周</button>
                 <button type="button" class="period-tab" data-period="month">本月</button>
@@ -257,7 +262,20 @@
     </div>
   </div>
 
+  <button type="button" class="back-top" id="btn-back-top" title="返回顶部" aria-label="返回顶部">↑</button>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script>
+    window.PMLOG_CONFIG = window.PMLOG_CONFIG || {
+      supabaseUrl: "https://kiuhfbaqvgpojgxakvpl.supabase.co",
+      supabaseAnonKey: ""
+    };
+  </script>
   <script src="data.js"></script>
+  <script src="supabase-client.js"></script>
+  <script src="auth.js"></script>
+  <script src="store.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
