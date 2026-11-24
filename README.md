@@ -19,8 +19,9 @@ npm run serve
 - 账号由管理员分配；首次登录或管理员重置后须强制修改密码
 - 不提供自助找回密码
 - 管理员：`admin001` / `xxjs@zyzq`
-- 员工李志远：`employee_lizhiyuan` / 初始 `Pmlog@123`（首次须改密；改密后以新密码为准）
-- 命名规则：领导 `leader_拼音`，员工 `employee_拼音`（管理员账号特例保留 `admin001`）
+- 员工/领导初始密码统一 `Pmlog@123`（首次须改密；已改密账号以新密码为准）
+- 命名规则：领导 `leader_拼音`（如 `leader_wangrui`），员工 `employee_拼音`（如 `employee_lizhiyuan`）；管理员特例 `admin001`
+- 仅同步人员：`npm run seed:users`（不覆盖项目/日志）
 
 ## 角色说明
 
