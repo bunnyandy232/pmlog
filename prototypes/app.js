@@ -3,24 +3,35 @@
   var bootError = document.createElement("div");
   bootError.style.cssText = "padding:24px;font-family:sans-serif;color:#b42318";
   var session = null;
+  function goLogin(msg) {
+    /* 不自动 location 跳转，避免与登录页互相重定向死循环；交给用户点击 */
+    try { sessionStorage.setItem("pmlog_block_auto_enter", "1"); } catch (e) { /* ignore */ }
+    document.body.innerHTML = "";
+    bootError.innerHTML = "";
+    bootError.appendChild(document.createTextNode(msg || "登录状态已失效。"));
+    var link = document.createElement("a");
+    link.href = (window.PMLOG_BASE || "") + "index.html";
+    link.textContent = "返回登录";
+    link.style.marginLeft = "8px";
+    bootError.appendChild(link);
+    document.body.appendChild(bootError);
+  }
   try {
     if (!window.PMLOG_CONFIG || !PMLOG_CONFIG.supabaseAnonKey) {
       throw new Error("缺少 Supabase anon key：请写入 .env.local 后执行 node scripts/write-config.mjs");
     }
     session = await PMLOG.Auth.restoreSession();
     if (!session || !session.userId) {
-      location.href = "index.html";
+      goLogin("未检测到有效登录会话。");
       return;
     }
     if (session.mustChangePassword) {
-      location.href = "index.html";
+      location.replace((window.PMLOG_BASE || "") + "index.html");
       return;
     }
     await PMLOG.Auth.loadUsers();
   } catch (err) {
-    document.body.innerHTML = "";
-    bootError.textContent = "启动失败：" + (err.message || String(err));
-    document.body.appendChild(bootError);
+    goLogin("启动失败：" + (err.message || String(err)));
     return;
   }
 
@@ -28,9 +39,10 @@
   var currentUser = PMLOG.userById(userId);
   if (!currentUser) {
     await PMLOG.Auth.clearSession();
-    location.href = "index.html";
+    goLogin("账号档案不存在或未激活。");
     return;
   }
+  try { sessionStorage.removeItem("pmlog_block_auto_enter"); } catch (e) { /* ignore */ }
   localStorage.setItem("pmlog_user", currentUser.id);
   var isLeader = currentUser.role === "leader";
 
@@ -1148,7 +1160,7 @@
   });
   document.getElementById("btn-logout").addEventListener("click", async function () {
     if (PMLOG.Auth) await PMLOG.Auth.clearSession();
-    location.href = "index.html";
+    location.replace((window.PMLOG_BASE || "") + "index.html");
   });
 
   async function refreshAll() {

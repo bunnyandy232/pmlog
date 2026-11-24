@@ -69,9 +69,25 @@ window.PMLOG = window.PMLOG || {};
     ensureSeed: function () { /* no-op: seeded server-side */ },
     restoreSession: async function () {
       var sb = PMLOG.getSupabase();
-      var sess = await sb.auth.getSession();
-      var authUser = sess.data && sess.data.session && sess.data.session.user;
+      function delay(ms) {
+        return new Promise(function (r) { setTimeout(r, ms); });
+      }
+      /* 等待 Auth storage hydration，避免刚跳转时 getSession 空值误清会话 */
+      var authUser = null;
+      var i;
+      for (i = 0; i < 6; i++) {
+        try {
+          var sess = await sb.auth.getSession();
+          authUser = sess.data && sess.data.session && sess.data.session.user;
+          if (authUser) break;
+          var gu = await sb.auth.getUser();
+          authUser = gu.data && gu.data.user;
+          if (authUser) break;
+        } catch (e) { /* retry */ }
+        await delay(100 + i * 150);
+      }
       if (!authUser) {
+        /* 仅在确认无 Supabase 会话时清理；避免打断刚写入的本地会话 */
         clearLocalSession();
         return null;
       }
